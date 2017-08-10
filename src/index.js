@@ -4,7 +4,7 @@
 'use strict'
 
 const path = require('path')
-const sgf = require('staged-git-files')
+const git = require('gitty')
 const appRoot = require('app-root-path')
 const Listr = require('listr')
 const cosmiconfig = require('cosmiconfig')
@@ -33,22 +33,36 @@ cosmiconfig('lint-staged', {
         // Output config in verbose mode
         if (verbose) console.log(config)
         const concurrent = readConfigOption(config, 'concurrent', true)
+        const staged = readConfigOption(config, 'staged', true)
+        const unstaged = readConfigOption(config, 'unstaged', false)
         const renderer = verbose ? 'verbose' : 'update'
         const gitDir = config.gitDir ? path.resolve(config.gitDir) : process.cwd()
-        sgf.cwd = gitDir
 
-        sgf('ACM', (err, files) => {
+        let repo = git(gitDir)
+
+        repo.status((err, status) => {
+            let files = [];
             if (err) {
                 console.error(err)
                 process.exit(1)
             }
 
             const resolvedFiles = {}
-            files.forEach((file) => {
-                const absolute = path.resolve(gitDir, file.filename)
-                const relative = path.relative(gitDir, absolute)
-                resolvedFiles[relative] = absolute
-            })
+            if (staged) {
+                status.unstaged.forEach((file) => {
+                    const absolute = path.resolve(gitDir, file.file)
+                    const relative = path.relative(gitDir, absolute)
+                    resolvedFiles[relative] = absolute
+                })
+            }
+
+            if (unstaged) {
+                status.unstaged.forEach((file) => {
+                    const absolute = path.resolve(gitDir, file.file)
+                    const relative = path.relative(gitDir, absolute)
+                    resolvedFiles[relative] = absolute
+                })
+            }
 
             const tasks = generateTasks(config, resolvedFiles)
                 .map(task => ({
