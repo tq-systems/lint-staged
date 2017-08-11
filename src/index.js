@@ -35,8 +35,12 @@ cosmiconfig('lint-staged', {
         const concurrent = readConfigOption(config, 'concurrent', true)
         const staged = readConfigOption(config, 'staged', true)
         const unstaged = readConfigOption(config, 'unstaged', false)
-        const renderer = verbose ? 'verbose' : 'update'
+        var renderer = verbose ? 'verbose' : 'default'
         const gitDir = config.gitDir ? path.resolve(config.gitDir) : process.cwd()
+
+        if (!process.stdout.isTTY) {
+            renderer = 'silent'
+        }
 
         let repo = git(gitDir)
 
